@@ -10,23 +10,36 @@ DEFAULT_PALETTE = [(90, 160, 220), (190, 120, 70), (100, 210, 140)]
 KEY_HOPS = {pygame.K_LEFT: (-1, -1), pygame.K_UP: (-1, 0), pygame.K_DOWN: (1, 0), pygame.K_RIGHT: (1, 1)}
 
 
+LEVEL_PALETTES = (
+    DEFAULT_PALETTE,
+    [(130, 90, 190), (240, 180, 60), (90, 225, 210)],
+    [(200, 70, 85), (245, 215, 80), (60, 190, 170)],
+    [(80, 95, 140), (240, 120, 180), (170, 240, 90)],
+    [(40, 120, 90), (230, 140, 50), (250, 235, 130)],
+)
+
+
 def cube_palette(level):
     """Return a list of TARGET + 1 (r, g, b) colours for the cube stages, or None for the default."""
-    pass
+    return list(LEVEL_PALETTES[(level - 1) % len(LEVEL_PALETTES)])
+
+
+COMPLETION_FLASH_MS = 350
+completion_flashes = {}
 
 
 def on_cube_completed(cell):
     """Called when a cube first reaches its target colour; add a flash, sound, or bonus here."""
-    pass
+    completion_flashes[cell] = pygame.time.get_ticks()
 
 
 def bonus_life_threshold():
     """Return a score value at which the player earns an extra life, or None to disable bonus lives."""
-    pass
+    return 1000
 
 
 def cube_center(row, col):
-    return pygame.Vector2(WIDTH / 2 + (col - row // 2) * CUBE_W, 90 + row * CUBE_H)
+    return pygame.Vector2(WIDTH / 2 + (col - row / 2) * CUBE_W, 90 + row * CUBE_H)
 
 
 def neighbors(row, col):
@@ -167,6 +180,14 @@ class Game:
         cx, cy = cube_center(*cell)
         top = [(cx, cy - CUBE_H / 2), (cx + CUBE_W / 2, cy), (cx, cy + CUBE_H / 2), (cx - CUBE_W / 2, cy)]
         color = colors[self.stages[cell]]
+        started = completion_flashes.get(cell)
+        if started is not None:
+            age = pygame.time.get_ticks() - started
+            if age >= COMPLETION_FLASH_MS:
+                del completion_flashes[cell]
+            elif self.stages[cell] == TARGET:
+                mix = 1 - age / COMPLETION_FLASH_MS
+                color = tuple(int(v + (255 - v) * mix) for v in color)
         left = [top[3], top[2], (cx, cy + CUBE_H / 2 + SIDE), (cx - CUBE_W / 2, cy + SIDE)]
         right = [top[1], top[2], (cx, cy + CUBE_H / 2 + SIDE), (cx + CUBE_W / 2, cy + SIDE)]
         pygame.draw.polygon(screen, shade(DEFAULT_PALETTE[0], 0.45), left)
